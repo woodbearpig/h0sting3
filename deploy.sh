@@ -49,13 +49,13 @@ fi
 command -v yarn >/dev/null 2>&1 || npm install -g yarn
 command -v pm2  >/dev/null 2>&1 || npm install -g pm2
 
-# MongoDB (Community 7.0). Skip this block if you use MongoDB Atlas instead.
+# MongoDB (Community 8.0). Skip this block if you use MongoDB Atlas instead.
 if ! command -v mongod >/dev/null 2>&1; then
-  log "Installing MongoDB 7.0"
-  curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
-  UBU_CODENAME="$(lsb_release -cs)"
-  echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu ${UBU_CODENAME}/mongodb-org/7.0 multiverse" \
-    > /etc/apt/sources.list.d/mongodb-org-7.0.list
+  log "Installing MongoDB 8.0"
+  curl -fsSL https://pgp.mongodb.com/server-8.0.asc | gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor
+  UBU_CODENAME="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+  echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu ${UBU_CODENAME}/mongodb-org/8.0 multiverse" \
+    > /etc/apt/sources.list.d/mongodb-org-8.0.list
   apt-get update -y
   apt-get install -y mongodb-org
   systemctl enable --now mongod
