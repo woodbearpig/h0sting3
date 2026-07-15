@@ -89,8 +89,17 @@ python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
 
 pm2 delete cc-backend >/dev/null 2>&1 || true
-pm2 start "$BACKEND_DIR/venv/bin/uvicorn" --name cc-backend --interpreter none --cwd "$BACKEND_DIR" -- \
-  server:app --host 0.0.0.0 --port 8001
+
+# A tiny bash wrapper is the most reliable way to run uvicorn under PM2
+# (avoids PM2 mistakenly executing the Python script with Node).
+cat > "$BACKEND_DIR/start.sh" <<EOF
+#!/bin/bash
+cd "$BACKEND_DIR"
+exec ./venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001
+EOF
+chmod +x "$BACKEND_DIR/start.sh"
+
+pm2 start "$BACKEND_DIR/start.sh" --name cc-backend
 pm2 save
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
 
