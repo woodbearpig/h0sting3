@@ -1,0 +1,99 @@
+{
+  "theme": "light",
+  "typography": {
+    "headings": {
+      "fontFamily": "Cabinet Grotesk, sans-serif",
+      "weights": ["400", "900"],
+      "letterSpacing": "tracking-tight"
+    },
+    "body": {
+      "fontFamily": "IBM Plex Sans, sans-serif",
+      "weights": ["400", "500", "600"],
+      "letterSpacing": "tracking-normal",
+      "lineHeight": "leading-relaxed"
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tighter",
+      "h2": "text-2xl sm:text-3xl font-black tracking-tight",
+      "h3": "text-xl font-bold",
+      "body": "text-base sm:text-sm",
+      "small": "text-sm sm:text-xs uppercase tracking-widest font-bold"
+    },
+    "instructions_to_main_agent": "Do not use default system fonts for headings. Implement global font via next/font or standard CDN. Ensure extreme weight contrast between headings and body."
+  },
+  "colors": {
+    "base": {
+      "background": "#F4F4F5",
+      "foreground": "#09090B",
+      "card": "#FFFFFF",
+      "border": "#E4E4E7",
+      "muted": "#FAFAFA",
+      "mutedForeground": "#71717A"
+    },
+    "brand": {
+      "primary": "#EA580C",
+      "primaryForeground": "#FAFAFA",
+      "secondary": "#18181B",
+      "accent": "#FDE68A",
+      "destructive": "#EF4444",
+      "success": "#22C55E"
+    },
+    "instructions_to_main_agent": "Use Archetype 4 (Swiss/High Contrast) mixed with Tactical Utility. Dominant UI is monochrome white/grey/black. Use primary color (High-Vis Orange, #EA580C) strictly for the prominent action (Share Location). Ensure dark overlays for hero images never exceed bg-black/50."
+  },
+  "visual_enhancers": {
+    "surfaces": "Use flat surfaces with sharp 1px borders border-black/10. Avoid heavy soft shadows. Add a subtle shadow-sm for elevation on cards.",
+    "effects": "Avoid glassmorphism except on sticky admin navbars. Keep UI opaque for maximum glare-free readability outdoors.",
+    "borders": "Use border-slate-200 for structured grids. Admin table layout should utilize border-collapse with subtle right/bottom borders for high density data visualization."
+  },
+  "components": {
+    "forms": "Use Shadcn Form, Input, Label. Apply border border-input rounded-md w-full. Avoid native HTML <input>.",
+    "buttons": {
+      "primary": "rounded-md border-2 border-black w-full py-6 text-lg font-black uppercase tracking-wide bg-primary text-primary-foreground hover:-translate-y-1 hover:shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-transform duration-200. Neuomorphic subtle variant is banned. Use solid hard borders for this tactical field app."
+    },
+    "modalsDialogs": "Use Shadcn Dialog for Privacy Policy. Overlay bg-black/80 backdrop-blur-sm. Deep contrast text.",
+    "map": "Leaflet + OpenStreetMap integration via react-leaflet. Use high-contrast presentation if possible, otherwise default OSM. Ensure sticky positioning on desktop split layout.",
+    "instructions": "Strip Shadcn components of default shadow-sm if it feels too soft; lean into stark 1px solid borders for a more durable 'contractor tool' vibe. DO NOT use HTML-based components for advanced user interactions."
+  },
+  "grids_layouts": {
+    "mobile_public": "Mobile-first centered column, generous p-4 to p-6 padding. Single clear hierarchy (Job Details -> Form -> Large Location Button -> Mini Map status).",
+    "desktop_public": "Split screen. Left: 40vw form and details. Right: 60vw fixed Map showing default area.",
+    "admin_dashboard": "High Density Protocol. grid-cols-12 layout. Top nav overlapping standard. Dense tabular layout for check-in data. max 8px border-radius.",
+    "spacing_scale": "Use standard Tailwind but apply at macro-scale between sections (gap-8, py-12). Internally on cards use p-6 for breathing room."
+  },
+  "motion": {
+    "transitions": "transition-colors duration-200 for links. hover:-translate-y-1 transition-transform for cards/buttons.",
+    "loaders": "Spinners on the 'Share Location' button while fetching GPS coordinates. Prevent double-click.",
+    "instructions_to_main_agent": "NEVER use transition-all. Be specific."
+  },
+  "accessibility": {
+    "contrast": "Ensure APCA contrast. Especially for the white text on primary orange buttons.",
+    "touch_targets": "The main 'Share Location' button MUST be at least 60px height. Fat-finger optimized.",
+    "testing": "All interactive elements MUST include a data-testid attribute in kebab-case."
+  },
+  "media": {
+    "image_urls": {
+      "hero_background": {
+        "url": "https://images.pexels.com/photos/10951145/pexels-photo-10951145.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Two construction workers on site under a cloudy sky. Use as an optional low-opacity background for the public login/check-in page, wrapped in a div with bg-black/40."
+      },
+      "company_logo": {
+        "url": "https://images.pexels.com/photos/21898300/pexels-photo-21898300.jpeg",
+        "description": "Professional logo placeholder for the admin dashboard header and public form header."
+      }
+    },
+    "instructions": "Use full absolute paths for images. The hero background should NOT drown out the form. Use solid backgrounds for data density areas."
+  },
+  "instructions_to_main_agent": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this.",
+    "Do not use dark colors as gradients.",
+    "Do not center align the app container, avoid '.App { text-align: center; }'.",
+    "Never use generic AI emojis.",
+    "Use sonner for toast notifications on check-in success/failure.",
+    "Create new components using pure HTML + Tailwind for structural layouts, and use Shadcn for interactive logic.",
+    "Add 'data-testid' to all critical interactions (form submit, map marker, privacy consent check).",
+    "Admin tables must handle high density data (Name, Email, Coordinates, Timestamp, Job ID). Use tight padding (py-2 px-3) inside table cells.",
+    "Check-in button must prompt for Geolocation API clearly, ensuring the Privacy modal intercepts FIRST before triggering browser prompt.",
+    "Ensure the application strictly follows standard JS component export patterns (.js files not .tsx).",
+    "Do not use completely transparent backgrounds for overlays or navbars over content."
+  ]
+}
