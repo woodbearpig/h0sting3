@@ -352,9 +352,3 @@ function SettingsTab() {
     </div>
   );
 }
-ave className="h-4 w-4 mr-1" /> {saving ? "Saving…" : "Save Content"}
-        </Button>
-      </div>
-    </div>
-  );
-}

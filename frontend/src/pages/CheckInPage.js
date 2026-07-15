@@ -52,7 +52,9 @@ export default function CheckInPage() {
     try {
       const data = (await api.get(`/jobs/${job.id}/checkins`)).data;
       setCheckins(data);
-    } catch {}
+    } catch (e) {
+      console.error("Failed to fetch check-ins", e);
+    }
   }, [job?.id]);
 
   useEffect(() => {
