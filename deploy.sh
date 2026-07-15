@@ -99,9 +99,19 @@ yarn build
 
 # ---------------------------------------------------------------------------
 log "5/6 Configuring Nginx"
+# Remove ALL default site definitions so they can't shadow our config
+rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/conf.d/default.conf
+
+# Ensure nginx.conf includes sites-enabled (some distro/templates omit it)
+if ! grep -q "sites-enabled" /etc/nginx/nginx.conf; then
+  sed -i '/http {/a \    include /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
+fi
+
 cat > "/etc/nginx/sites-available/$DOMAIN" <<EOF
 server {
-    listen 80;
+    listen 80 default_server;
+    listen [::]:80 default_server;
     server_name $DOMAIN www.$DOMAIN;
 
     root $FRONTEND_DIR/build;
@@ -122,7 +132,6 @@ server {
 EOF
 
 ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
-rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
 
