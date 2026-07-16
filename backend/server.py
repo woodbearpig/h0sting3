@@ -122,6 +122,7 @@ class MapArea(BaseModel):
 class CustomField(BaseModel):
     key: str
     label: str
+    type: str = "text"        # "text" | "email" | "tel" | "textarea"
     required: bool = False
 
 
@@ -130,6 +131,7 @@ class JobInput(BaseModel):
     description: str = ""
     hero_image_url: str = ""
     button_label: str = "Share Location"
+    form_heading: str = "Your Details"
     custom_fields: List[CustomField] = Field(default_factory=list)
     default_map_area: MapArea = Field(default_factory=MapArea)
     display_mode: str = "map"          # "map" | "image" | "text"
@@ -143,6 +145,7 @@ class Job(BaseDocument):
     description: str = ""
     hero_image_url: str = ""
     button_label: str = "Share Location"
+    form_heading: str = "Your Details"
     custom_fields: List[CustomField] = Field(default_factory=list)
     default_map_area: MapArea = Field(default_factory=MapArea)
     display_mode: str = "map"
@@ -158,22 +161,24 @@ class Settings(BaseModel):
     tagline: str = "Contractor Check-In Portal"
 
 
+class ResponseItem(BaseModel):
+    key: str
+    label: str
+    value: str = ""
+
+
 class CheckInInput(BaseModel):
     job_id: str
-    contractor_name: str
-    email: EmailStr
-    phone: str
-    custom_data: dict = Field(default_factory=dict)
+    responses: List[ResponseItem] = Field(default_factory=list)
     latitude: float
     longitude: float
 
 
 class CheckIn(BaseDocument):
     job_id: str
-    contractor_name: str
-    email: str
-    phone: str
-    custom_data: dict = Field(default_factory=dict)
+    responses: List[ResponseItem] = Field(default_factory=list)
+    contractor_name: str = ""
+    email: str = ""
     latitude: float
     longitude: float
     created_at: str = Field(default_factory=now_iso)
@@ -290,7 +295,18 @@ async def create_checkin(payload: CheckInInput):
     job = await db.jobs.find_one({"_id": ObjectId(payload.job_id)})
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    checkin = CheckIn(**payload.model_dump())
+
+    # Derive display name/email from responses for the admin table (best effort)
+    name = ""
+    email = ""
+    for r in payload.responses:
+        k = (r.key or "").lower()
+        if not name and (k in ("full_name", "name") or "name" in k):
+            name = r.value
+        if not email and (k == "email" or "email" in k):
+            email = r.value
+
+    checkin = CheckIn(**payload.model_dump(), contractor_name=name, email=email)
     doc = checkin.to_mongo()
     res = await db.checkins.insert_one(doc)
     doc["_id"] = res.inserted_id
@@ -351,15 +367,36 @@ async def startup():
     if not await db.settings.find_one({"_id": "global"}):
         await db.settings.update_one({"_id": "global"}, {"$set": Settings().model_dump()}, upsert=True)
 
+    # One-time migration: give pre-existing jobs the new form fields + heading
+    async for job in db.jobs.find({"form_heading": {"$exists": False}}):
+        existing = job.get("custom_fields", [])
+        keys = {f.get("key") for f in existing}
+        defaults = []
+        if not ({"full_name", "name"} & keys):
+            defaults.append({"key": "full_name", "label": "Full Name", "type": "text", "required": True})
+        if "email" not in keys:
+            defaults.append({"key": "email", "label": "Email", "type": "email", "required": True})
+        if "phone" not in keys:
+            defaults.append({"key": "phone", "label": "Phone", "type": "tel", "required": True})
+        await db.jobs.update_one(
+            {"_id": job["_id"]},
+            {"$set": {"form_heading": "Your Details", "custom_fields": defaults + existing}},
+        )
+    logger.info("Migrated existing jobs to editable form fields")
+
     if await db.jobs.count_documents({}) == 0:
         sample = Job(
             title="TechSpider Site — Downtown Tower",
             description="Welcome to the TechSpider construction site check-in. Please provide your details and share your location so our site supervisor can verify your arrival on-site.",
             hero_image_url="https://images.pexels.com/photos/10951145/pexels-photo-10951145.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
             button_label="Share My Location",
+            form_heading="Your Details",
             custom_fields=[
-                CustomField(key="site_number", label="Site Number", required=True),
-                CustomField(key="id_badge", label="ID Badge Number", required=False),
+                CustomField(key="full_name", label="Full Name", type="text", required=True),
+                CustomField(key="email", label="Email", type="email", required=True),
+                CustomField(key="phone", label="Phone", type="tel", required=True),
+                CustomField(key="site_number", label="Site Number", type="text", required=True),
+                CustomField(key="id_badge", label="ID Badge Number", type="text", required=False),
             ],
             default_map_area=MapArea(lat=40.7128, lng=-74.0060, zoom=12),
         )

@@ -117,9 +117,7 @@ function CheckInsTab() {
             <table className="w-full text-sm border-collapse" data-testid="checkins-table">
               <thead>
                 <tr className="bg-secondary text-secondary-foreground text-left uppercase text-xs tracking-wider">
-                  <th className="py-2 px-3">Name</th>
-                  <th className="py-2 px-3">Email</th>
-                  <th className="py-2 px-3">Phone</th>
+                  <th className="py-2 px-3">Submitted Details</th>
                   <th className="py-2 px-3">Coordinates</th>
                   <th className="py-2 px-3">Job</th>
                   <th className="py-2 px-3">Timestamp</th>
@@ -127,12 +125,26 @@ function CheckInsTab() {
               </thead>
               <tbody>
                 {rows.length === 0 ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">No check-ins yet.</td></tr>
+                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No check-ins yet.</td></tr>
                 ) : rows.map((r) => (
-                  <tr key={r.id} className="border-b border-border hover:bg-muted" data-testid="checkin-row">
-                    <td className="py-2 px-3 font-semibold">{r.contractor_name}</td>
-                    <td className="py-2 px-3">{r.email}</td>
-                    <td className="py-2 px-3">{r.phone}</td>
+                  <tr key={r.id} className="border-b border-border hover:bg-muted align-top" data-testid="checkin-row">
+                    <td className="py-2 px-3">
+                      {(r.responses && r.responses.length > 0) ? (
+                        <div className="space-y-0.5">
+                          {r.responses.map((f, idx) => (
+                            <div key={idx}>
+                              <span className="text-muted-foreground">{f.label}: </span>
+                              <span className="font-medium">{f.value || "—"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <div><span className="font-semibold">{r.contractor_name || "—"}</span></div>
+                          {r.email && <div className="text-muted-foreground">{r.email}</div>}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2 px-3 font-mono text-xs">{r.latitude.toFixed(5)}, {r.longitude.toFixed(5)}</td>
                     <td className="py-2 px-3">{jobTitle(r.job_id)}</td>
                     <td className="py-2 px-3 text-muted-foreground">{new Date(r.created_at).toLocaleString()}</td>
@@ -228,7 +240,7 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
   const setField = (k, v) => setEditing({ ...editing, [k]: v });
   const setArea = (k, v) => setEditing({ ...editing, default_map_area: { ...editing.default_map_area, [k]: v } });
 
-  const addField = () => setEditing({ ...editing, custom_fields: [...editing.custom_fields, { uid: crypto.randomUUID(), key: `field_${editing.custom_fields.length + 1}`, label: "", required: false }] });
+  const addField = () => setEditing({ ...editing, custom_fields: [...editing.custom_fields, { uid: crypto.randomUUID(), key: `field_${editing.custom_fields.length + 1}`, label: "", type: "text", required: false }] });
   const updateField = (i, k, v) => {
     const cf = [...editing.custom_fields];
     cf[i] = { ...cf[i], [k]: v };
@@ -242,7 +254,8 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
     setSaving(true);
     const payload = {
       title: editing.title, description: editing.description, hero_image_url: editing.hero_image_url,
-      button_label: editing.button_label, custom_fields: editing.custom_fields,
+      button_label: editing.button_label, form_heading: editing.form_heading || "Your Details",
+      custom_fields: editing.custom_fields,
       default_map_area: {
         lat: parseFloat(editing.default_map_area.lat) || 0,
         lng: parseFloat(editing.default_map_area.lng) || 0,
@@ -334,20 +347,35 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
 
           <div className="border-2 border-black rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <Label className="uppercase tracking-widest text-xs font-bold">Custom Form Fields</Label>
-              <Button size="sm" variant="outline" className="border-2 border-black" onClick={addField} data-testid="add-field-btn"><Plus className="h-3 w-3 mr-1" />Add</Button>
+              <Label className="uppercase tracking-widest text-xs font-bold">Check-In Form</Label>
+              <Button size="sm" variant="outline" className="border-2 border-black" onClick={addField} data-testid="add-field-btn"><Plus className="h-3 w-3 mr-1" />Add Field</Button>
             </div>
-            <div className="space-y-2 mt-3">
+            <div className="mt-3 space-y-1.5">
+              <Label className="text-xs">Form Heading</Label>
+              <Input data-testid="job-form-heading-input" value={editing.form_heading || ""} onChange={(e) => setField("form_heading", e.target.value)} placeholder="Your Details" />
+            </div>
+            <div className="space-y-2 mt-4">
               {editing.custom_fields.map((f, i) => (
-                <div key={f.uid || f.key || i} className="flex items-center gap-2" data-testid="custom-field-row">
-                  <Input className="flex-1" placeholder="Field label (e.g. Site Number)" value={f.label} onChange={(e) => updateField(i, "label", e.target.value)} data-testid={`field-label-${i}`} />
+                <div key={f.uid || f.key || i} className="flex flex-wrap items-center gap-2" data-testid="custom-field-row">
+                  <Input className="flex-1 min-w-[140px]" placeholder="Field label (e.g. Full Name)" value={f.label} onChange={(e) => updateField(i, "label", e.target.value)} data-testid={`field-label-${i}`} />
+                  <select
+                    value={f.type || "text"}
+                    onChange={(e) => updateField(i, "type", e.target.value)}
+                    data-testid={`field-type-${i}`}
+                    className="border-2 border-black rounded-md h-9 px-2 text-sm bg-card"
+                  >
+                    <option value="text">Text</option>
+                    <option value="email">Email</option>
+                    <option value="tel">Phone</option>
+                    <option value="textarea">Long text</option>
+                  </select>
                   <label className="flex items-center gap-1 text-xs whitespace-nowrap">
                     <Switch checked={f.required} onCheckedChange={(v) => updateField(i, "required", v)} data-testid={`field-required-${i}`} /> Req
                   </label>
                   <Button size="icon" variant="ghost" onClick={() => removeField(i)} data-testid={`field-remove-${i}`}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
               ))}
-              {editing.custom_fields.length === 0 && <p className="text-xs text-muted-foreground">No custom fields. Name, Email, Phone are always collected.</p>}
+              {editing.custom_fields.length === 0 && <p className="text-xs text-muted-foreground">No fields yet. Add fields like Full Name, Email, Phone, Site Number…</p>}
             </div>
           </div>
 

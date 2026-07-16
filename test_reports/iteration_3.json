@@ -1,0 +1,62 @@
+{
+  "summary": "Tested the new admin-customizable check-in form feature (form_heading + typed responses-based check-ins). Backend: rewrote /app/backend/tests/backend_test.py for the new responses[] contract; 18/18 pytest PASS including form_heading persistence, typed custom_fields (text/email/tel/textarea), migration adding contact fields, responses-based POST /api/checkins deriving contractor_name/email server-side, and public+admin GET returning responses[]. Frontend: public check-in shows job.form_heading, renders one type-aware input per custom field, required validation blocks submit with a toast ('Full Name is required.'), valid submit + geolocation succeeds, pin appears on map, pin-count increments. Admin table renders 'Submitted Details' column with label:value pairs (verified: Full Name: TEST_Alice, Email: —, Site Number: B-7, ID Badge Number: —), Coordinates, Job, Timestamp. Admin edit that removed Phone from the seed job propagated to the public page (input-custom-phone absent). ONE HIGH-PRIORITY BUG FOUND: New Job dialog does NOT seed the 3 default fields (Full Name/Email/Phone) and Form Heading is empty — contradicting the spec 'New jobs default to three fields: Full Name (text), Email (email), Phone (tel)'. RCA: emptyJob() in AdminDashboard.js has custom_fields:[] and no form_heading.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/checkins",
+        "issue": "Silently accepts payloads WITHOUT a 'responses' field (defaults to []) instead of returning 422. If a legacy client sends old {contractor_name, email, phone, custom_data}, the endpoint returns 200 with empty responses and derived name/email='' — no error surfaced. Consider making responses field required to fail-fast old clients."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminDashboard.JobDialog (New Job)",
+        "issue": "New Job dialog opens with ZERO custom fields and an EMPTY Form Heading. Spec requires it to default to three fields — Full Name (text), Email (email), Phone (tel) — and form_heading='Your Details'. RCA: emptyJob() in /app/frontend/src/pages/AdminDashboard.js returns { custom_fields: [], ... } and does not set form_heading. Fix: seed emptyJob().custom_fields with [{key:'full_name',label:'Full Name',type:'text',required:true},{key:'email',label:'Email',type:'email',required:true},{key:'phone',label:'Phone',type:'tel',required:true}] and set form_heading:'Your Details'.",
+        "selector": "[data-testid=\"new-job-btn\"] -> [data-testid=\"job-dialog\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "testability_issues": [
+      {
+        "component": "MapView (react-leaflet MapContainer)",
+        "issue": "Carried over from iteration_2: data-testid=\"leaflet-map\" passed to <MapContainer> is not forwarded to the DOM. Test-only nit; map itself works via .leaflet-container.",
+        "priority": "LOW"
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "HIGH: Seed emptyJob() in /app/frontend/src/pages/AdminDashboard.js with 3 default fields (Full Name/Email/Phone) and form_heading='Your Details' so 'New Job' matches the spec.",
+    "LOW: Make responses field required (min_items=1?) on CheckInInput in /app/backend/server.py so legacy client shapes get a clear 422 instead of silently creating empty check-ins.",
+    "LOW (carry-over from iteration_2): Wrap <MapContainer> in a <div data-testid=\"leaflet-map\"> in /app/frontend/src/components/MapView.js.",
+    "LOW (carry-over from iteration_1): Wrap navigator.clipboard.writeText in try/catch in AdminDashboard.copyLink."
+  ],
+  "critical_code_review_comments": [
+    "AdminDashboard.emptyJob(): missing form_heading and the 3 default contact fields — spec violation.",
+    "Backend server.py CheckInInput.responses default_factory=list means empty responses are accepted silently. Not a security issue, but weakens the API contract.",
+    "server.py create_checkin: name/email derivation uses 'name' in k / 'email' in k substring matching — works but could collide with custom keys like 'company_name' or 'emergency_contact_email'. Consider preferring exact key matches ('full_name', 'name', 'email') first.",
+    "AdminDashboard.js is now 435 lines with 4 inline sub-components — still recommend splitting per iteration_1/iteration_2 feedback.",
+    "JobDialog.updateField auto-derives 'key' from label — good, but doesn't guarantee uniqueness across fields (two rows labelled 'Full Name' get duplicate keys 'full_name'). Consider suffixing when a collision occurs.",
+    "startup migration (server.py lines 371-384) prepends default fields to any job missing form_heading. Verified in test_migration_added_contact_fields (all listed jobs have full_name/email/phone + form_heading)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py (rewrote for the new responses-based contract; added form_heading + typed-fields + migration + phone-removal tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 pytest, new responses[] contract)",
+    "frontend": "~85% (public check-in + admin edit + admin table all pass; New Job dialog defaults are broken)"
+  },
+  "test_credentials": "admin@techspider.site / Admin@12345 (from backend/.env, matches /app/memory/test_credentials.md)",
+  "seed_data_creation": "Cleanup done. Deleted TEST_UI_v3_Job and AUTOTEST_Job Renamed via API after testing. TEST_Alice check-in on the seed job (Downtown Tower) and one TEST_User check-in remain in the DB — non-destructive, tied to the seed job the user asked us not to clean up (per 'feel free to leave data').",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Auth is cookie-based httpOnly access_token — pytest fixture sends Cookie header, Playwright uses page.context after login. For public check-in tests: page.context.grant_permissions(['geolocation'], origin=BASE) + set_geolocation({lat:40.7128,lng:-74.006}) BEFORE clicking share-location-btn. When retesting the New Job default-fields bug, click new-job-btn then check custom-field-row count == 3 and their labels are Full Name/Email/Phone with types text/email/tel; also check job-form-heading-input value === 'Your Details'. The [data-testid=\"leaflet-map\"] selector still does NOT resolve — use .leaflet-container instead.",
+  "rca_of_the_issue": "New Job default-fields bug RCA: In /app/frontend/src/pages/AdminDashboard.js line ~20, `emptyJob()` returns `{ title:'', description:'', hero_image_url:'', button_label:'Share Location', custom_fields:[], default_map_area:{...}, display_mode:'map', display_image_url:'', display_text:'', active:true }`. It (a) omits `form_heading` entirely (JobDialog defaults it to '' via `editing.form_heading || ''` — placeholder shows 'Your Details' but the input value is empty; only on save does `payload.form_heading = editing.form_heading || 'Your Details'` fall back), and (b) provides an empty custom_fields array so the field-rows list is empty when the admin opens 'New Job'. Fix: `custom_fields: [ {key:'full_name',label:'Full Name',type:'text',required:true}, {key:'email',label:'Email',type:'email',required:true}, {key:'phone',label:'Phone',type:'tel',required:true} ]` and `form_heading: 'Your Details'`."
+}

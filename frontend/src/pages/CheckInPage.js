@@ -13,8 +13,7 @@ export default function CheckInPage() {
   const [settings, setSettings] = useState(null);
   const [job, setJob] = useState(null);
   const [loadingJob, setLoadingJob] = useState(true);
-  const [form, setForm] = useState({ contractor_name: "", email: "", phone: "" });
-  const [custom, setCustom] = useState({});
+  const [values, setValues] = useState({});
   const [locating, setLocating] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [checkins, setCheckins] = useState([]);
@@ -64,11 +63,8 @@ export default function CheckInPage() {
   }, [job?.id, fetchCheckins]);
 
   const validate = () => {
-    if (!form.contractor_name.trim()) return "Please enter your name.";
-    if (!form.email.trim()) return "Please enter your email.";
-    if (!form.phone.trim()) return "Please enter your phone number.";
     for (const f of job.custom_fields || []) {
-      if (f.required && !((custom[f.key] || "").trim())) return `${f.label} is required.`;
+      if (f.required && !((values[f.key] || "").trim())) return `${f.label} is required.`;
     }
     return null;
   };
@@ -90,10 +86,11 @@ export default function CheckInPage() {
         try {
           await api.post("/checkins", {
             job_id: job.id,
-            contractor_name: form.contractor_name,
-            email: form.email,
-            phone: form.phone,
-            custom_data: custom,
+            responses: (job.custom_fields || []).map((f) => ({
+              key: f.key,
+              label: f.label,
+              value: values[f.key] || "",
+            })),
             latitude,
             longitude,
           });
@@ -210,50 +207,34 @@ export default function CheckInPage() {
             </div>
           ) : (
             <div className="bg-card border-2 border-black rounded-lg p-6 space-y-4">
-              <h2 className="font-display text-xl font-bold">Your Details</h2>
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  data-testid="input-name"
-                  value={form.contractor_name}
-                  onChange={(e) => setForm({ ...form, contractor_name: e.target.value })}
-                  placeholder="John Carter"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  data-testid="input-email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="john@example.com"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  data-testid="input-phone"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="+1 555 000 1234"
-                />
-              </div>
+              <h2 className="font-display text-xl font-bold" data-testid="form-heading">
+                {job.form_heading || "Your Details"}
+              </h2>
               {(job.custom_fields || []).map((f) => (
                 <div className="space-y-1.5" key={f.key}>
                   <Label htmlFor={f.key}>
                     {f.label} {f.required && <span className="text-primary">*</span>}
                   </Label>
-                  <Input
-                    id={f.key}
-                    data-testid={`input-custom-${f.key}`}
-                    value={custom[f.key] || ""}
-                    onChange={(e) => setCustom({ ...custom, [f.key]: e.target.value })}
-                    placeholder={f.label}
-                  />
+                  {f.type === "textarea" ? (
+                    <textarea
+                      id={f.key}
+                      data-testid={`input-custom-${f.key}`}
+                      value={values[f.key] || ""}
+                      onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                      placeholder={f.label}
+                      rows={3}
+                      className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                  ) : (
+                    <Input
+                      id={f.key}
+                      type={f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"}
+                      data-testid={`input-custom-${f.key}`}
+                      value={values[f.key] || ""}
+                      onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                      placeholder={f.label}
+                    />
+                  )}
                 </div>
               ))}
 
