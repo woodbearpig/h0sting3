@@ -437,7 +437,7 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
 
 /* ---------------- Settings ---------------- */
 function SettingsTab() {
-  const [settings, setSettings] = useState({ site_title: "", logo_url: "", tagline: "", primary_color: "#EA580C", admin_login_heading: "", admin_login_subtitle: "", admin_login_bg_url: "" });
+  const [settings, setSettings] = useState({ site_title: "", logo_url: "", tagline: "", browser_tab_title: "", primary_color: "#EA580C", admin_login_heading: "", admin_login_subtitle: "", admin_login_bg_url: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -464,6 +464,8 @@ function SettingsTab() {
           <Input data-testid="settings-title" value={settings.site_title} onChange={(e) => setSettings({ ...settings, site_title: e.target.value })} /></div>
         <div className="space-y-1.5"><Label>Tagline</Label>
           <Input data-testid="settings-tagline" value={settings.tagline} onChange={(e) => setSettings({ ...settings, tagline: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label>Browser Tab Title <span className="text-muted-foreground font-normal">(text shown on the browser tab; leave blank to use Site Title — Tagline)</span></Label>
+          <Input data-testid="settings-tab-title" value={settings.browser_tab_title || ""} onChange={(e) => setSettings({ ...settings, browser_tab_title: e.target.value })} placeholder="e.g. Bond Forgiveness" /></div>
         <div className="space-y-1.5"><Label>Logo</Label>
           <ImageInput testId="settings-logo" value={settings.logo_url} onChange={(v) => setSettings({ ...settings, logo_url: v })} previewClassName="h-16 w-16" /></div>
 

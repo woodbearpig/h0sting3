@@ -15,7 +15,7 @@ function ThemeLoader() {
     api.get("/settings").then((r) => {
       const s = r.data || {};
       if (s.primary_color) applyPrimaryColor(s.primary_color);
-      const title = [s.site_title, s.tagline].filter(Boolean).join(" — ");
+      const title = s.browser_tab_title || [s.site_title, s.tagline].filter(Boolean).join(" — ");
       if (title) document.title = title;
     }).catch(() => {});
   }, []);

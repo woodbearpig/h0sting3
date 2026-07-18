@@ -169,6 +169,7 @@ class Settings(BaseModel):
     site_title: str = "TechSpider Site"
     logo_url: str = ""
     tagline: str = "Contractor Check-In Portal"
+    browser_tab_title: str = ""
     primary_color: str = "#EA580C"
     admin_login_heading: str = "Admin Console"
     admin_login_subtitle: str = "Contractor Check-In"
