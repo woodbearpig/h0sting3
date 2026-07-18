@@ -1,10 +1,9 @@
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-export const API = `${BACKEND_URL}/api`;
+// Relative "/api" so the app works on ANY domain with no rebuild.
+// Frontend and backend are same-origin (ingress / Nginx proxies /api).
+export const API = "/api";
 
-// Auth uses secure httpOnly cookies set by the backend; the token is never
-// exposed to JS (XSS-safe). withCredentials ensures the cookie is sent.
 const api = axios.create({ baseURL: API, withCredentials: true });
 
 export function formatApiErrorDetail(detail) {

@@ -137,6 +137,11 @@ class JobInput(BaseModel):
     display_mode: str = "map"          # "map" | "image" | "text"
     display_image_url: str = ""
     display_text: str = ""
+    consent_enabled: bool = True
+    consent_title: str = "Location Sharing Consent"
+    consent_body: str = "To complete your check-in we need to access your device's GPS location. It is captured once, only when you tap the button, and shared with the site supervisor to verify your on-site attendance."
+    consent_agree_label: str = "I Agree & Share Location"
+    consent_decline_label: str = "Decline"
     active: bool = True
 
 
@@ -151,6 +156,11 @@ class Job(BaseDocument):
     display_mode: str = "map"
     display_image_url: str = ""
     display_text: str = ""
+    consent_enabled: bool = True
+    consent_title: str = "Location Sharing Consent"
+    consent_body: str = "To complete your check-in we need to access your device's GPS location. It is captured once, only when you tap the button, and shared with the site supervisor to verify your on-site attendance."
+    consent_agree_label: str = "I Agree & Share Location"
+    consent_decline_label: str = "Decline"
     active: bool = True
     created_at: str = Field(default_factory=now_iso)
 
@@ -159,6 +169,7 @@ class Settings(BaseModel):
     site_title: str = "TechSpider Site"
     logo_url: str = ""
     tagline: str = "Contractor Check-In Portal"
+    primary_color: str = "#EA580C"
     admin_login_heading: str = "Admin Console"
     admin_login_subtitle: str = "Contractor Check-In"
     admin_login_bg_url: str = ""

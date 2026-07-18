@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapView } from "@/components/MapView";
+import { PrivacyModal } from "@/components/PrivacyModal";
 import { MapPin, Loader2, CheckCircle2, HardHat } from "lucide-react";
 
 export default function CheckInPage() {
@@ -15,6 +16,7 @@ export default function CheckInPage() {
   const [loadingJob, setLoadingJob] = useState(true);
   const [values, setValues] = useState({});
   const [locating, setLocating] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [checkins, setCheckins] = useState([]);
   const [recenterTo, setRecenterTo] = useState(null);
@@ -75,6 +77,14 @@ export default function CheckInPage() {
       toast.error(err);
       return;
     }
+    if (job.consent_enabled !== false) {
+      setConsentOpen(true);
+    } else {
+      captureLocation();
+    }
+  };
+
+  const captureLocation = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation is not supported by your browser.");
       return;
@@ -95,6 +105,7 @@ export default function CheckInPage() {
             longitude,
           });
           setSubmitted(true);
+          setConsentOpen(false);
           setRecenterTo([latitude, longitude]);
           toast.success("Location shared! You are checked in.");
           fetchCheckins();
@@ -282,6 +293,17 @@ export default function CheckInPage() {
           )}
         </div>
       </div>
+
+      <PrivacyModal
+        open={consentOpen}
+        onOpenChange={setConsentOpen}
+        onConsent={captureLocation}
+        loading={locating}
+        title={job.consent_title}
+        body={job.consent_body}
+        agreeLabel={job.consent_agree_label}
+        declineLabel={job.consent_decline_label}
+      />
     </div>
   );
 }

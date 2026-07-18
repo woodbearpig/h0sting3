@@ -1,11 +1,23 @@
 import "@/App.css";
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
+import api from "@/lib/api";
+import { applyPrimaryColor } from "@/lib/theme";
 import CheckInPage from "@/pages/CheckInPage";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
+
+function ThemeLoader() {
+  useEffect(() => {
+    api.get("/settings").then((r) => {
+      if (r.data?.primary_color) applyPrimaryColor(r.data.primary_color);
+    }).catch(() => {});
+  }, []);
+  return null;
+}
 
 function ProtectedRoute({ children }) {
   const { user, ready } = useAuth();
@@ -25,6 +37,7 @@ function App() {
     <div className="App">
       <AuthProvider>
         <BrowserRouter>
+          <ThemeLoader />
           <Routes>
             <Route path="/" element={<CheckInPage />} />
             <Route path="/checkin/:jobId" element={<CheckInPage />} />

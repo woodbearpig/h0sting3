@@ -73,6 +73,25 @@ class TestSettings:
         assert r.status_code == 200
         data = r.json()
         assert "site_title" in data and "tagline" in data
+        # new: primary_color present in public settings
+        assert "primary_color" in data
+        assert isinstance(data["primary_color"], str)
+
+    def test_update_primary_color_persists(self, api_client, auth_headers):
+        # Get current
+        current = api_client.get(f"{API}/settings").json()
+        original = current.get("primary_color", "#EA580C")
+        new_color = "#2563EB"
+        payload = {**current, "primary_color": new_color}
+        r = api_client.put(f"{API}/settings", json=payload, headers=auth_headers)
+        assert r.status_code == 200
+        assert r.json()["primary_color"] == new_color
+        # Persist via GET
+        got = api_client.get(f"{API}/settings").json()
+        assert got["primary_color"] == new_color
+        # Restore
+        payload["primary_color"] = original
+        api_client.put(f"{API}/settings", json=payload, headers=auth_headers)
 
 
 # ------------- Jobs (new form_heading + typed custom_fields) -------------
@@ -166,6 +185,54 @@ class TestJobs:
 
         # cleanup
         api_client.delete(f"{API}/jobs/{job_id}", headers=auth_headers)
+
+    # ---- NEW: consent fields on Jobs ----
+    def test_job_defaults_include_consent_fields(self, api_client, auth_headers):
+        payload = {"title": "TEST_Consent_Defaults", "active": True}
+        cr = api_client.post(f"{API}/jobs", json=payload, headers=auth_headers)
+        assert cr.status_code == 200
+        job = cr.json()
+        assert job.get("consent_enabled") is True
+        assert isinstance(job.get("consent_title"), str) and job["consent_title"]
+        assert isinstance(job.get("consent_body"), str) and job["consent_body"]
+        assert job.get("consent_agree_label")
+        assert job.get("consent_decline_label")
+        api_client.delete(f"{API}/jobs/{job['id']}", headers=auth_headers)
+
+    def test_job_update_consent_fields_persist(self, api_client, auth_headers):
+        payload = {"title": "TEST_Consent_Edit", "active": True}
+        cr = api_client.post(f"{API}/jobs", json=payload, headers=auth_headers)
+        job = cr.json()
+        job_id = job["id"]
+        upd = {
+            "title": job["title"],
+            "consent_enabled": False,
+            "consent_title": "Custom Privacy Title",
+            "consent_body": "Custom body text explaining consent.",
+            "consent_agree_label": "OK, Share",
+            "consent_decline_label": "No Thanks",
+            "active": True,
+        }
+        ur = api_client.put(f"{API}/jobs/{job_id}", json=upd, headers=auth_headers)
+        assert ur.status_code == 200
+        # GET verifies persistence
+        got = api_client.get(f"{API}/jobs/{job_id}").json()
+        assert got["consent_enabled"] is False
+        assert got["consent_title"] == "Custom Privacy Title"
+        assert got["consent_body"] == "Custom body text explaining consent."
+        assert got["consent_agree_label"] == "OK, Share"
+        assert got["consent_decline_label"] == "No Thanks"
+        api_client.delete(f"{API}/jobs/{job_id}", headers=auth_headers)
+
+    def test_public_jobs_return_consent_fields(self, api_client):
+        jobs = api_client.get(f"{API}/jobs").json()
+        assert len(jobs) >= 1
+        for j in jobs:
+            assert "consent_enabled" in j
+            assert "consent_title" in j
+            assert "consent_body" in j
+            assert "consent_agree_label" in j
+            assert "consent_decline_label" in j
 
 
 # ------------- Check-ins (new responses-based contract) -------------

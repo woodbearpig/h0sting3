@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { MapView } from "@/components/MapView";
 import { ImageInput } from "@/components/ImageInput";
+import { applyPrimaryColor } from "@/lib/theme";
 import {
   HardHat, LogOut, Plus, Trash2, Pencil, Save, MapPin, Copy, Users, Briefcase, Settings2,
 } from "lucide-react";
@@ -27,7 +28,13 @@ const emptyJob = () => ({
     { uid: crypto.randomUUID(), key: "phone", label: "Phone", type: "tel", required: true },
   ],
   default_map_area: { lat: 40.7128, lng: -74.006, zoom: 12 },
-  display_mode: "map", display_image_url: "", display_text: "", active: true,
+  display_mode: "map", display_image_url: "", display_text: "",
+  consent_enabled: true,
+  consent_title: "Location Sharing Consent",
+  consent_body: "To complete your check-in we need to access your device's GPS location. It is captured once, only when you tap the button, and shared with the site supervisor to verify your on-site attendance.",
+  consent_agree_label: "I Agree & Share Location",
+  consent_decline_label: "Decline",
+  active: true,
 });
 
 export default function AdminDashboard() {
@@ -271,6 +278,11 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
       display_mode: editing.display_mode || "map",
       display_image_url: editing.display_image_url || "",
       display_text: editing.display_text || "",
+      consent_enabled: editing.consent_enabled !== false,
+      consent_title: editing.consent_title || "Location Sharing Consent",
+      consent_body: editing.consent_body || "",
+      consent_agree_label: editing.consent_agree_label || "I Agree & Share Location",
+      consent_decline_label: editing.consent_decline_label || "Decline",
       active: editing.active,
     };
     try {
@@ -385,6 +397,28 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
             </div>
           </div>
 
+          <div className="border-2 border-black rounded-lg p-4 space-y-3">
+            <label className="flex items-center gap-2">
+              <Switch checked={editing.consent_enabled !== false} onCheckedChange={(v) => setField("consent_enabled", v)} data-testid="consent-enabled-switch" />
+              <span className="uppercase tracking-widest text-xs font-bold">Location Consent Modal</span>
+            </label>
+            {editing.consent_enabled !== false && (
+              <>
+                <div className="space-y-1.5"><Label className="text-xs">Modal Title</Label>
+                  <Input data-testid="consent-title-input" value={editing.consent_title || ""} onChange={(e) => setField("consent_title", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label className="text-xs">Modal Body Text</Label>
+                  <Textarea data-testid="consent-body-input" rows={4} value={editing.consent_body || ""} onChange={(e) => setField("consent_body", e.target.value)} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5"><Label className="text-xs">Agree Button Label</Label>
+                    <Input data-testid="consent-agree-input" value={editing.consent_agree_label || ""} onChange={(e) => setField("consent_agree_label", e.target.value)} /></div>
+                  <div className="space-y-1.5"><Label className="text-xs">Decline Button Label</Label>
+                    <Input data-testid="consent-decline-input" value={editing.consent_decline_label || ""} onChange={(e) => setField("consent_decline_label", e.target.value)} /></div>
+                </div>
+                <p className="text-xs text-muted-foreground">When off, clicking the button prompts the browser location dialog directly (no modal).</p>
+              </>
+            )}
+          </div>
+
           <label className="flex items-center gap-2">
             <Switch checked={editing.active} onCheckedChange={(v) => setField("active", v)} data-testid="job-active-switch" />
             <span className="text-sm font-medium">Active (visible on public check-in)</span>
@@ -403,7 +437,7 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
 
 /* ---------------- Settings ---------------- */
 function SettingsTab() {
-  const [settings, setSettings] = useState({ site_title: "", logo_url: "", tagline: "", admin_login_heading: "", admin_login_subtitle: "", admin_login_bg_url: "" });
+  const [settings, setSettings] = useState({ site_title: "", logo_url: "", tagline: "", primary_color: "#EA580C", admin_login_heading: "", admin_login_subtitle: "", admin_login_bg_url: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -415,6 +449,7 @@ function SettingsTab() {
     setSaving(true);
     try {
       await api.put("/settings", settings);
+      if (settings.primary_color) applyPrimaryColor(settings.primary_color);
       toast.success("Site content saved");
     } catch (e) {
       toast.error(formatApiErrorDetail(e.response?.data?.detail) || "Save failed");
@@ -431,6 +466,26 @@ function SettingsTab() {
           <Input data-testid="settings-tagline" value={settings.tagline} onChange={(e) => setSettings({ ...settings, tagline: e.target.value })} /></div>
         <div className="space-y-1.5"><Label>Logo</Label>
           <ImageInput testId="settings-logo" value={settings.logo_url} onChange={(v) => setSettings({ ...settings, logo_url: v })} previewClassName="h-16 w-16" /></div>
+
+        <div className="space-y-1.5">
+          <Label>Brand Color <span className="text-muted-foreground font-normal">(applied to buttons &amp; accents everywhere)</span></Label>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              data-testid="settings-color-picker"
+              value={settings.primary_color || "#EA580C"}
+              onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+              className="h-10 w-14 rounded border-2 border-black cursor-pointer bg-transparent"
+            />
+            <Input
+              data-testid="settings-color-hex"
+              value={settings.primary_color || ""}
+              onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+              placeholder="#EA580C"
+              className="max-w-[160px] font-mono"
+            />
+          </div>
+        </div>
 
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <Label className="uppercase tracking-widest text-xs font-bold">Admin Login Page</Label>
