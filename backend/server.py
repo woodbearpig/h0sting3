@@ -145,6 +145,9 @@ class JobInput(BaseModel):
     consent_body: str = "To complete your check-in we need to access your device's GPS location. It is captured once, only when you tap the button, and shared with the site supervisor to verify your on-site attendance."
     consent_agree_label: str = "I Agree & Share Location"
     consent_decline_label: str = "Decline"
+    share_title: str = ""
+    share_description: str = ""
+    share_image_url: str = ""
     active: bool = True
 
 
@@ -164,6 +167,9 @@ class Job(BaseDocument):
     consent_body: str = "To complete your check-in we need to access your device's GPS location. It is captured once, only when you tap the button, and shared with the site supervisor to verify your on-site attendance."
     consent_agree_label: str = "I Agree & Share Location"
     consent_decline_label: str = "Decline"
+    share_title: str = ""
+    share_description: str = ""
+    share_image_url: str = ""
     active: bool = True
     created_at: str = Field(default_factory=now_iso)
 
@@ -379,9 +385,15 @@ async def _load_settings() -> Settings:
 
 
 @api_router.get("/share-image")
-async def share_image():
-    s = await _load_settings()
-    img = s.share_image_url or s.logo_url or ""
+async def share_image(job_id: Optional[str] = None):
+    img = ""
+    if job_id and ObjectId.is_valid(job_id):
+        job = await db.jobs.find_one({"_id": ObjectId(job_id)})
+        if job:
+            img = job.get("share_image_url") or job.get("hero_image_url") or ""
+    if not img:
+        s = await _load_settings()
+        img = s.share_image_url or s.logo_url or ""
     if img.startswith("data:") and "," in img:
         header, b64 = img.split(",", 1)
         ctype = header.split(";")[0].replace("data:", "") or "image/png"
@@ -413,17 +425,14 @@ def _esc(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
-def _inject_meta(html: str, s: Settings, base_url: str, has_image: bool) -> str:
-    title = s.share_title or s.browser_tab_title or " — ".join([x for x in [s.site_title, s.tagline] if x]) or "Check-In"
-    desc = s.share_description or s.tagline or ""
-    image = f"{base_url}/api/share-image" if has_image else ""
+def _inject_meta(html: str, title: str, desc: str, image: str, url: str) -> str:
     tags = [
         f"<title>{_esc(title)}</title>",
         f'<meta name="description" content="{_esc(desc)}" />',
         '<meta property="og:type" content="website" />',
         f'<meta property="og:title" content="{_esc(title)}" />',
         f'<meta property="og:description" content="{_esc(desc)}" />',
-        f'<meta property="og:url" content="{_esc(base_url)}" />',
+        f'<meta property="og:url" content="{_esc(url)}" />',
         f'<meta name="twitter:card" content="{"summary_large_image" if image else "summary"}" />',
         f'<meta name="twitter:title" content="{_esc(title)}" />',
         f'<meta name="twitter:description" content="{_esc(desc)}" />',
@@ -448,8 +457,27 @@ async def serve_spa(full_path: str, request: Request):
     proto = request.headers.get("x-forwarded-proto", request.url.scheme)
     host = request.headers.get("host", request.url.netloc)
     base_url = f"{proto}://{host}"
+
+    # Global defaults
+    title = s.share_title or s.browser_tab_title or " — ".join([x for x in [s.site_title, s.tagline] if x]) or "Check-In"
+    desc = s.share_description or s.tagline or ""
     has_image = bool(s.share_image_url or s.logo_url)
-    return HTMLResponse(_inject_meta(html, s, base_url, has_image))
+    image_query = ""
+
+    # Per-job preview for /checkin/<jobId>
+    m = re.match(r"checkin/([a-fA-F0-9]{24})", full_path)
+    if m:
+        jid = m.group(1)
+        job = await db.jobs.find_one({"_id": ObjectId(jid)})
+        if job:
+            title = job.get("share_title") or job.get("title") or title
+            desc = job.get("share_description") or job.get("description") or desc
+            has_image = bool(job.get("share_image_url") or job.get("hero_image_url")) or has_image
+            image_query = f"?job_id={jid}"
+
+    image = f"{base_url}/api/share-image{image_query}" if has_image else ""
+    url = f"{base_url}/{full_path}" if full_path else base_url
+    return HTMLResponse(_inject_meta(html, title, desc, image, url))
 
 
 app.add_middleware(

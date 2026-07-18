@@ -34,6 +34,7 @@ const emptyJob = () => ({
   consent_body: "To complete your check-in we need to access your device's GPS location. It is captured once, only when you tap the button, and shared with the site supervisor to verify your on-site attendance.",
   consent_agree_label: "I Agree & Share Location",
   consent_decline_label: "Decline",
+  share_title: "", share_description: "", share_image_url: "",
   active: true,
 });
 
@@ -283,6 +284,9 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
       consent_body: editing.consent_body || "",
       consent_agree_label: editing.consent_agree_label || "I Agree & Share Location",
       consent_decline_label: editing.consent_decline_label || "Decline",
+      share_title: editing.share_title || "",
+      share_description: editing.share_description || "",
+      share_image_url: editing.share_image_url || "",
       active: editing.active,
     };
     try {
@@ -314,6 +318,17 @@ function JobDialog({ open, setOpen, editing, setEditing, onSaved }) {
           </div>
           <div className="space-y-1.5"><Label>Button Label</Label>
             <Input data-testid="job-button-input" value={editing.button_label} onChange={(e) => setField("button_label", e.target.value)} /></div>
+
+          <div className="border-2 border-black rounded-lg p-4 space-y-3">
+            <Label className="uppercase tracking-widest text-xs font-bold">Link Preview (when THIS job's link is shared)</Label>
+            <p className="text-xs text-muted-foreground">Controls the title, text and thumbnail shown when this job's check-in link is shared in a text, WhatsApp, Slack, etc. Leave blank to fall back to the job title / description / hero image.</p>
+            <div className="space-y-1.5"><Label className="text-xs">Preview Title</Label>
+              <Input data-testid="job-share-title" value={editing.share_title || ""} onChange={(e) => setField("share_title", e.target.value)} placeholder="e.g. Downtown Tower — Check In" /></div>
+            <div className="space-y-1.5"><Label className="text-xs">Preview Description</Label>
+              <Textarea data-testid="job-share-description" rows={2} value={editing.share_description || ""} onChange={(e) => setField("share_description", e.target.value)} placeholder="e.g. Tap to share your location and check in on-site." /></div>
+            <div className="space-y-1.5"><Label className="text-xs">Preview Image</Label>
+              <ImageInput testId="job-share-image" value={editing.share_image_url} onChange={(v) => setField("share_image_url", v)} previewClassName="h-24 w-full" /></div>
+          </div>
 
           <div className="border-2 border-black rounded-lg p-4">
             <Label className="uppercase tracking-widest text-xs font-bold">Front Page Right Panel</Label>
